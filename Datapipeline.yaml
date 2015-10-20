@@ -1,0 +1,45 @@
+# HEADER INFORMATION
+name : core_pipeline_prototype
+frequency : daily
+load_time: 01:00  # Hour:Min in UTC
+topic_arn: 'arn:aws:sns:core_pipeline_prototype'
+
+# DESCRIPTION
+description : Prototype Dataduct pipeline for core ingestion
+
+# PIPELINE STEPS
+steps:
+-   step_type: extract-s3
+    name: get_excel
+    file_uri: s3://twonilwarehouse/core_ingestion_demo/input/wix.xlsx
+
+-   step_type: transform
+    name: excel_to_csv
+    input_node: get_excel
+    script: scripts/excel_to_csv.py
+    output_path: s3://twonilwarehouse/core_ingestion_demo/input/
+
+-   step_type: transform
+    name: csv_to_core_format
+    script: /twonil/tansformer/.process-core
+    script_arguments:
+    -  -i INPUT1_STAGING_DIR
+    -  -o OUTPUT1_STAGING_DIR
+    output_node:
+    -   core_output1
+    -   core_output2
+
+-   step_type: prep_for_core
+    name: purge_core_data
+    input_node: core_output1
+    host_name: dev
+    database: bvs 
+    table: TwoNil_Commercial_Daily_Testing
+
+-   step_type: load-rds
+    columns: Core_id, Source, ISCI_20, VendorStation, BroadCastDate, OverlapFlag, AccountID, StartDate, Product, HighDef, ForeignNet_Rate, CalendarDate, SpotOverlaps, Program, Station, BroadCastWeek, GRP, SpotAttribution, StopDate, MediaType, Length, StopTime, StartDateTime, Affliate, BroadCastDayOfWeek, Advertiser, CalendarDayOfWeek, ForeignGross_Rate, Net_Rate, Gross_Rate, StartTime, Impressions, Market
+    column_count: 31
+    input_node: core_output2
+    host_name: dev
+    database: bvs 
+    table: TwoNil_Commercial_Daily_Testing
